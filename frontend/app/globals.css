@@ -1,0 +1,432 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════
+   Design Tokens — Premium Dark-First + Refined Light Theme
+   ══════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    --background: #F0F2F7;
+    --foreground: #0F172A;
+    --card: #FFFFFF;
+    --card-foreground: #0F172A;
+    --border: #D1D9E6;
+    --primary: #0A6FFF;
+    --primary-glow: rgba(10, 111, 255, 0.12);
+    --secondary: #6D28D9;
+    --accent: #0284C7;
+    --muted: #E3E8F0;
+    --muted-foreground: #556378;
+    --success: #059669;
+    --warning: #D97706;
+    --error: #DC2626;
+    --radius: 0.75rem;
+    --noise-opacity: 0.06;
+    /* Increased to make matte finish more noticeable */
+  }
+
+  .dark {
+    --background: #07070C;
+    --foreground: #F0F2F7;
+    --card: rgba(255, 255, 255, 0.04);
+    --card-foreground: #F0F2F7;
+    --border: rgba(255, 255, 255, 0.08);
+    --primary: #3B8EFF;
+    --primary-glow: rgba(59, 142, 255, 0.25);
+    --secondary: #8B5CF6;
+    --accent: #06B6D4;
+    --muted: rgba(255, 255, 255, 0.06);
+    --muted-foreground: #8B99AE;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    --noise-opacity: 0.08;
+    /* Increased to make matte finish more noticeable */
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Base Styles
+   ══════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle noise/grain texture overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: var(--noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Custom Scrollbar
+   ══════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Keyframe Animations
+   ══════════════════════════════════════════════════════════ */
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--primary-glow);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(10, 132, 255, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(10, 132, 255, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes glow-breathe {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px var(--primary-glow);
+  }
+
+  50% {
+    box-shadow: 0 0 40px var(--primary-glow);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes border-glow {
+
+  0%,
+  100% {
+    border-color: var(--primary);
+    opacity: 0.4;
+  }
+
+  50% {
+    border-color: var(--secondary);
+    opacity: 0.8;
+  }
+}
+
+@keyframes dot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+}
+
+@keyframes slide-in-underline {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Utility Classes
+   ══════════════════════════════════════════════════════════ */
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 100%);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-glow {
+  animation: glow-breathe 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+.animate-dash {
+  animation: dash 1s linear infinite;
+}
+
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+.glassmorphism {
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
+
+/* Light mode glassmorphism gets subtle shadow instead of just border */
+:root .glassmorphism {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.dark .glassmorphism {
+  box-shadow: 0 0 0 0 transparent;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Enhanced Card Hover Effects
+   ══════════════════════════════════════════════════════════ */
+
+.card-hover-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-hover-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, transparent 40%, var(--primary) 50%, var(--secondary) 60%, transparent 70%);
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease, background-position 0.6s ease;
+}
+
+.card-hover-glow:hover::before {
+  opacity: 1;
+  background-position: 100% 100%;
+}
+
+/* Nav link hover underline */
+.nav-link-hover {
+  position: relative;
+}
+
+.nav-link-hover::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.nav-link-hover:hover::after {
+  transform: scaleX(1);
+}
+
+/* Dot grid background pattern */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(59, 142, 255, 0.15) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.dark .dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(59, 142, 255, 0.08) 1px, transparent 1px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Database animation CSS (for Aceternity-style API viz)
+   ══════════════════════════════════════════════════════════ */
+
+.database {
+  offset-anchor: 10px 0px;
+  animation: database-animation-path;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  animation-duration: 4s;
+  animation-delay: 1s;
+}
+
+.db-light-1 {
+  offset-path: path("M 31 10 v 15 q 0 5 5 5 h 59 q 5 0 5 5 v 25");
+}
+
+.db-light-2 {
+  offset-path: path("M 77 10 v 10 q 0 5 5 5 h 13 q 5 0 5 5 v 25");
+}
+
+.db-light-3 {
+  offset-path: path("M 124 10 v 10 q 0 5 -5 5 h -14 q -5 0 -5 5 v 25");
+}
+
+.db-light-4 {
+  offset-path: path("M 170 10 v 15 q 0 5 -5 5 h -60 q -5 0 -5 5 v 25");
+}
+
+@keyframes database-animation-path {
+  0% {
+    offset-distance: 0%;
+  }
+
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Background Patterns
+   ══════════════════════════════════════════════════════════ */
+
+/* Hero — prominent grid with cross pattern */
+.hero-grid-bg {
+  background-image:
+    linear-gradient(rgba(59, 142, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 142, 255, 0.12) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.dark .hero-grid-bg {
+  background-image:
+    linear-gradient(rgba(59, 142, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 142, 255, 0.07) 1px, transparent 1px);
+}
+
+/* Dot grid for subtle section backgrounds */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(59, 142, 255, 0.2) 1.2px, transparent 1.2px);
+  background-size: 28px 28px;
+}
+
+.dark .dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(59, 142, 255, 0.12) 1.2px, transparent 1.2px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Reduced Motion
+   ══════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

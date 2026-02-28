@@ -1,0 +1,47 @@
+﻿  Γû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At C:\Program Files\nodejs\npx.ps1:29 
+char:3
++   & $NODE_EXE $NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecifi 
+   ed: (Failed to compile.:String) [],   
+  RemoteException
+    + FullyQualifiedErrorId : NativeComm 
+   andError
+ 
+
+./app/(dashboard)/tasks/page.tsx:139:29
+Type error: Type 'unknown' is not 
+assignable to type 'ReactNode'.
+
+[0m [90m 137 |[39m                    
+         [33m<[39m[33m/[39m[33mdiv[
+39m[33m>[39m[0m
+[0m [90m 138 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 139 |[39m 
+                            {[90m/* 
+Metadata */[39m}[0m
+[0m [90m     |[39m                    
+         [31m[1m^[22m[39m[0m
+[0m [90m 140 |[39m                    
+         [33m<[39m[33mdiv[39m 
+className[33m=[39m[32m"space-y-3 
+mb-6"[39m[33m>[39m[0m
+[0m [90m 141 |[39m                    
+             
+[33m<[39m[33mdiv[39m[33m>[39m[0m
+[0m [90m 142 |[39m                    
+                 
+[33m<[39m[33mspan[39m 
+className[33m=[39m[32m"text-xs text-mu
+ted-foreground"[39m[33m>[39m[33mID[3
+9m[33m<[39m[33m/[39m[33mspan[39m[3
+3m>[39m[0m
+Next.js build worker exited with code: 1 
+and signal: null

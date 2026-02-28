@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  # ── PostgreSQL Database ──
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agentic
+      POSTGRES_PASSWORD: agentic_secret
+      POSTGRES_DB: agentic_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U agentic" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ──
+  api:
+    build: .
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://agentic:agentic_secret@db:5432/agentic_db
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      ENVIRONMENT: production
+      LOG_LEVEL: info
+      CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - chroma_data:/app/chroma_data
+
+  # ── Next.js Frontend ──
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  chroma_data:
