@@ -1,8 +1,12 @@
 """
-Text chunker for RAG pipeline — splits documents into overlapping chunks
-for optimal retrieval quality.
+Text chunker for RAG pipeline — uses LangChain's splitters for intelligent chunking
+based on semantic boundaries (paragraphs, sentences) rather than naïve characters.
 """
 
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+import logging
+
+logger = logging.getLogger(__name__)
 
 def chunk_text(
     text: str,
@@ -10,7 +14,7 @@ def chunk_text(
     chunk_overlap: int = 50,
 ) -> list[dict]:
     """
-    Split text into overlapping chunks with metadata.
+    Split text into overlapping chunks using LangChain's RecursiveCharacterTextSplitter.
 
     Args:
         text: The full document text.
@@ -18,37 +22,47 @@ def chunk_text(
         chunk_overlap: Overlap between consecutive chunks for context continuity.
 
     Returns:
-        List of dicts with 'text', 'chunk_index', 'start_char', 'end_char'.
+        List of dicts with 'text' and 'chunk_index' ('start_char'/'end_char' are estimated).
     """
-    if not text.strip():
+    if not text or not text.strip():
         return []
 
-    chunks = []
-    start = 0
-    chunk_index = 0
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", " ", ""]
+    )
 
-    while start < len(text):
-        end = start + chunk_size
-
-        # Try to break at sentence boundary
-        if end < len(text):
-            # Look for sentence-ending punctuation near the boundary
-            for boundary in [". ", ".\n", "! ", "? ", "\n\n"]:
-                last_boundary = text.rfind(boundary, start + chunk_size // 2, end + 100)
-                if last_boundary != -1:
-                    end = last_boundary + len(boundary)
-                    break
-
-        chunk = text[start:end].strip()
-        if chunk:
+    try:
+        langchain_chunks = splitter.create_documents([text])
+        
+        chunks = []
+        current_char_estimate = 0
+        
+        for index, doc in enumerate(langchain_chunks):
+            chunk_str = doc.page_content.strip()
+            if chunk_str:
+                chunks.append({
+                    "text": chunk_str,
+                    "chunk_index": index,
+                    "start_char": current_char_estimate,
+                    "end_char": current_char_estimate + len(chunk_str),
+                })
+                # Estimate for legacy compatibility
+                current_char_estimate += max(1, len(chunk_str) - chunk_overlap)
+                
+        return chunks
+    except Exception as e:
+        logger.error(f"Error during chunking: {e}")
+        # Fallback to primitive chunking if LangChain fails for some reason
+        chunks = []
+        for i in range(0, len(text), chunk_size - chunk_overlap):
+            chunk = text[i:i + chunk_size]
             chunks.append({
                 "text": chunk,
-                "chunk_index": chunk_index,
-                "start_char": start,
-                "end_char": min(end, len(text)),
+                "chunk_index": len(chunks),
+                "start_char": i,
+                "end_char": i + len(chunk)
             })
-            chunk_index += 1
+        return chunks
 
-        start = end - chunk_overlap
-
-    return chunks

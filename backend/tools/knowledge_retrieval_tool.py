@@ -46,7 +46,7 @@ class KnowledgeRetrievalTool(BaseTool):
                     "query": query,
                     "matches": len(results),
                     "context": "\n\n---\n\n".join(context_parts),
-                    "sources": [{"source": r["source"], "relevance": r["relevance_score"]} for r in results],
+                    "sources": [{"source": r["source"]} for r in results],
                 },
             )
         except Exception as e:

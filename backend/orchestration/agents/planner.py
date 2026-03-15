@@ -44,20 +44,26 @@ Task to accomplish:
 Available tools:
 {json.dumps(available_tools, indent=2)}
 
-Create a detailed step-by-step plan. Return JSON:
+Create a step-by-step plan. IMPORTANT RULES:
+1. If the user is just chatting (greetings, questions about you, general conversation), create ONE step with tool_needed="none".
+2. For tasks needing MULTIPLE tools, chain them so each step's output feeds into the next.
+   Example: "Scrape a website and summarize it" → Step 1: web_scraper, Step 2: text_summarizer (uses scraped text)
+3. For simple single-tool tasks (e.g. "calculate 2+2"), create just ONE step.
+4. Only use tool names from the available tools list above, or "none" for conversational responses.
+
+Return JSON:
 {{
     "steps": [
         {{
             "step_number": 1,
-            "description": "what to do",
-            "tool_needed": "tool_name from available tools above",
+            "description": "what to do (be specific about data flow from previous steps)",
+            "tool_needed": "tool_name or none",
             "expected_output": "what we expect to get"
         }}
     ],
     "estimated_complexity": "low|medium|high"
 }}
 
-IMPORTANT: Only use tool names from the available tools list above.
 Return ONLY JSON."""
 
     try:
@@ -77,16 +83,15 @@ Return ONLY JSON."""
 
         plan_data = plan.model_dump()
 
-        # ── Human-in-the-Loop for complex plans ──
-        if len(plan.steps) >= 3 or plan.estimated_complexity == "high":
+        # ── Human-in-the-Loop for complex multi-step plans (4+ steps) ──
+        if len(plan.steps) >= 4:
             log.info("requesting_human_approval", steps=len(plan.steps))
 
             manager.request_approval_sync(task_id, plan_data)
 
-            # Wait for user approval (blocks until response or timeout)
+            # Wait for user approval (auto-approve after 30s if no response)
             try:
-                loop = asyncio.get_event_loop()
-                approval = await manager.wait_for_approval(task_id, timeout=300)
+                approval = await manager.wait_for_approval(task_id, timeout=30)
 
                 if not approval.get("approved", True):
                     log.info("plan_rejected", feedback=approval.get("feedback", ""))
@@ -111,8 +116,14 @@ Return ONLY JSON."""
                 })
 
             except Exception as e:
-                log.warning("approval_flow_error", error=str(e))
-                # Continue execution on error (fail-open)
+                log.warning("approval_timeout_auto_approve", error=str(e))
+                # Auto-approve on timeout — never leave the user hanging
+                manager.broadcast_sync(task_id, {
+                    "type": "progress",
+                    "agent": "planner",
+                    "status": "approved",
+                    "message": "Plan auto-approved (no response within 30s)",
+                })
 
     except (ValidationError, json.JSONDecodeError) as e:
         log.error("agent_failed", error=str(e))

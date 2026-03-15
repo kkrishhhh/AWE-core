@@ -89,7 +89,8 @@ export type WSMessageType =
     | "progress"
     | "approval_request"
     | "result"
-    | "error";
+    | "error"
+    | "token";
 
 export interface WSProgress {
     type: "progress";
@@ -131,12 +132,18 @@ export interface WSStatus {
     message: string;
 }
 
+export interface WSToken {
+    type: "token";
+    token: string;
+}
+
 export type WSMessage =
     | WSProgress
     | WSApprovalRequest
     | WSResult
     | WSError
-    | WSStatus;
+    | WSStatus
+    | WSToken;
 
 // ── Documents (RAG) ──
 

@@ -34,6 +34,7 @@ class WebScraperTool(BaseTool):
             async with httpx.AsyncClient(
                 timeout=15.0,
                 follow_redirects=True,
+                verify=False,  # Bypass SSL cert errors on local dev
                 headers={
                     "User-Agent": "Mozilla/5.0 (compatible; AgenticBot/2.0)"
                 },

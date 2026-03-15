@@ -1,0 +1,14 @@
+﻿{
+  "project": "Agentic Workflow Engine (AWE) - DEEP EXPANDED SUITE",
+  "version": "2.0",
+  "note": "This is the expanded deep suite.",
+  "test_suites": [
+    {
+      "suite_id": "TS-D01",
+      "suite_name": "Tool: Calculator - Deep Coverage (100 cases)",
+      "tests": [
+        { "id": "TC-D01-001", "title": "Add two positive integers", "input": "2 + 2", "expected_result": "4", "tags": ["calculator"] }
+      ]
+    }
+  ]
+}

@@ -49,3 +49,7 @@ test_chroma_data*/
 
 # ─── Gemini / Agent ───
 .gemini/
+
+# ─── Local Scripts & Temp Files ───
+*.txt
+test_*.py

@@ -106,8 +106,32 @@ export async function uploadDocument(
     });
 }
 
+export async function uploadFile(file: File, source?: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (source) formData.append("source", source);
+
+    const res = await fetch(`${BASE_URL}/api/documents/upload`, {
+        method: "POST",
+        body: formData,
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `API error: ${res.status}`);
+    }
+    return res.json();
+}
+
 export async function getDocuments() {
     return fetchAPI<DocumentsResponse>("/api/documents");
+}
+
+export async function deleteDocument(documentId: string) {
+    return fetchAPI<{ deleted: number; document_id: string }>(
+        `/api/documents/${documentId}`,
+        { method: "DELETE" }
+    );
 }
 
 // ── Tools ──

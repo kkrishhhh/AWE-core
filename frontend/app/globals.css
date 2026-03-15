@@ -42,8 +42,8 @@
     --success: #10B981;
     --warning: #F59E0B;
     --error: #EF4444;
-    --noise-opacity: 0.08;
-    /* Increased to make matte finish more noticeable */
+    --noise-opacity: 0.14;
+    /* Strong matte finish — visible even at low brightness */
   }
 }
 
@@ -275,7 +275,33 @@ body::before {
 }
 
 .dark .glassmorphism {
-  box-shadow: 0 0 0 0 transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 0 transparent;
+}
+
+/* Dashboard ambient gradient background */
+.dashboard-bg {
+  position: relative;
+}
+
+.dashboard-bg::after {
+  content: "";
+  position: fixed;
+  top: -30%;
+  left: -10%;
+  width: 50%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(59, 142, 255, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .dashboard-bg::after {
+  background: radial-gradient(circle, rgba(59, 142, 255, 0.04) 0%, transparent 70%);
+}
+
+.dashboard-bg>* {
+  position: relative;
+  z-index: 1;
 }
 
 .gradient-text {

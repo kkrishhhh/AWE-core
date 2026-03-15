@@ -16,7 +16,7 @@ import asyncio
 import structlog
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
@@ -365,6 +365,53 @@ async def ingest_document(req: DocumentIngestRequest):
     return result
 
 
+@app.post("/api/documents/upload", status_code=201)
+async def ingest_upload(file: UploadFile = File(...), source: str = Form(None)):
+    """Extract text from various file formats and ingest into RAG."""
+    try:
+        from fastapi.concurrency import run_in_threadpool
+        from backend.rag.document_loader import document_loader
+        from backend.rag.vector_store import vector_store
+
+        file_bytes = await file.read()
+        filename = file.filename or "unknown"
+        
+        # Offload the CPU-bound parsing to a thread
+        def parse_file():
+            return document_loader.load(file_bytes, filename)
+            
+        text = await run_in_threadpool(parse_file)
+
+        if len(text.strip()) < 10:
+            raise HTTPException(status_code=400, detail="Could not extract enough text from this file.")
+
+        # Truncate very large files to prevent ChromaDB slowness
+        if len(text) > 100000:
+            text = text[:100000]
+
+        doc_source = source or filename
+
+        # Offload ChromaDB ingestion to a thread too
+        def do_ingest():
+            return vector_store.ingest(
+                text=text,
+                source=doc_source,
+                metadata={"file_name": filename, "original_size": len(file_bytes)},
+                chunk_size=1000,
+                chunk_overlap=150
+            )
+            
+        result = await run_in_threadpool(do_ingest)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logger.error("file_extraction_failed", error=str(e), filename=getattr(file, "filename", "unknown"))
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+
+
 @app.get("/api/documents")
 async def list_documents():
     """List all documents in the RAG knowledge base."""
@@ -376,6 +423,17 @@ async def list_documents():
         "documents": docs,
         **stats,
     }
+
+
+@app.delete("/api/documents/{document_id}")
+async def delete_document(document_id: str):
+    """Delete a document and all its chunks from the knowledge base."""
+    from backend.rag.vector_store import vector_store
+
+    result = vector_store.delete_document(document_id)
+    if result["deleted"] == 0:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return result
 
 
 # ══════════════════════════════════════════════════════════

@@ -1,5 +1,7 @@
-from typing import TypedDict, Optional, List, Dict, Any
+from typing import TypedDict, Optional, List, Dict, Any, Annotated
 from enum import Enum
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
 
 class ExecutionMode(Enum):
     WORKFLOW = "workflow"
@@ -9,6 +11,7 @@ class TaskState(TypedDict):
     # Input
     task_id: str
     user_input: str
+    messages: Annotated[list[AnyMessage], add_messages]
     
     # Intent interpretation
     interpreted_task: Optional[Dict[str, Any]]

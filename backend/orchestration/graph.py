@@ -1,4 +1,5 @@
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
 from backend.orchestration.state import TaskState
 from backend.orchestration.agents.intent_interpreter import interpret_intent
 from backend.orchestration.agents.router import route_task
@@ -23,8 +24,8 @@ def should_continue_execution(state: dict) -> str:
     if current_step >= total_steps:
         return "evaluate"
     
-    # Check if we need reflection (every 2 steps)
-    if current_step > 0 and current_step % 2 == 0:
+    # Only reflect on multi-step plans (every 2 steps) — skip for single-step
+    if total_steps > 1 and current_step > 0 and current_step % 2 == 0:
         return "reflect"
     
     return "execute"
@@ -78,7 +79,7 @@ def create_graph():
     graph.add_edge("reflect", "execute")  # Continue after reflection
     graph.add_edge("evaluate", END)
     
-    return graph.compile()
+    return graph.compile(checkpointer=MemorySaver())
 
 # Create the compiled graph
 workflow = create_graph()

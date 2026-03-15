@@ -72,8 +72,8 @@ export default function TasksPage() {
                         </div>
                     )}
 
-                    <div className="space-y-2">
-                        {tasksData?.tasks?.map((task) => {
+                    <div className="space-y-3">
+                        {tasksData?.tasks?.map((task, i) => {
                             const cfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.pending;
                             const StatusIcon = cfg.icon;
 
@@ -82,10 +82,12 @@ export default function TasksPage() {
                                     key={task.task_id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.04 }}
+                                    whileHover={{ y: -2, scale: 1.005 }}
                                     onClick={() => setSelectedTaskId(task.task_id)}
                                     className={cn(
-                                        "w-full text-left glassmorphism rounded-xl p-4 flex items-center gap-4 hover:border-white/20 transition-all group",
-                                        selectedTaskId === task.task_id && "border-primary/30"
+                                        "w-full text-left glassmorphism card-hover-glow rounded-xl p-4 flex items-center gap-4 transition-all group",
+                                        selectedTaskId === task.task_id && "border-primary/40 shadow-[0_0_15px_var(--primary-glow)]"
                                     )}
                                 >
                                     <StatusIcon
@@ -99,8 +101,15 @@ export default function TasksPage() {
                                         <p className="text-sm truncate font-medium">
                                             {task.user_input.length > 60 ? task.user_input.slice(0, 60) + "…" : task.user_input}
                                         </p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className={cn("text-xs font-medium", cfg.color)}>
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <span className={cn(
+                                                "text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider",
+                                                task.status === "completed" && "bg-success/15 text-success",
+                                                task.status === "failed" && "bg-error/15 text-error",
+                                                task.status === "running" && "bg-primary/15 text-primary",
+                                                task.status === "pending" && "bg-warning/15 text-warning",
+                                                task.status === "awaiting_approval" && "bg-secondary/15 text-secondary",
+                                            )}>
                                                 {cfg.label}
                                             </span>
                                             <span className="text-[10px] text-muted-foreground">

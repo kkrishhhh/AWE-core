@@ -15,6 +15,7 @@ import {
     Moon,
     Menu,
     X,
+    HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -27,7 +28,7 @@ const SIDEBAR_LINKS = [
     { label: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ onOpenGuide }: { onOpenGuide?: () => void }) {
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
@@ -130,6 +131,28 @@ export function DashboardSidebar() {
                     </AnimatePresence>
                 </div>
 
+                {/* How to Use button */}
+                {onOpenGuide && (
+                    <button
+                        onClick={onOpenGuide}
+                        className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg w-full transition-colors"
+                    >
+                        <HelpCircle className="w-4 h-4 flex-shrink-0" />
+                        <AnimatePresence>
+                            {(isExpanded || isMobileOpen) && (
+                                <motion.span
+                                    initial={{ opacity: 0, width: 0 }}
+                                    animate={{ opacity: 1, width: "auto" }}
+                                    exit={{ opacity: 0, width: 0 }}
+                                    className="whitespace-nowrap overflow-hidden"
+                                >
+                                    How to Use
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </button>
+                )}
+
                 {/* Theme toggle */}
                 {mounted && (
                     <button
@@ -198,7 +221,7 @@ export function DashboardSidebar() {
                 onMouseEnter={() => setIsExpanded(true)}
                 onMouseLeave={() => setIsExpanded(false)}
                 className={cn(
-                    "hidden lg:flex flex-col h-screen sticky top-0 border-r border-border bg-background transition-all duration-300",
+                    "hidden lg:flex flex-col h-screen sticky top-0 border-r border-border bg-background/80 backdrop-blur-xl transition-all duration-300",
                     isExpanded ? "w-[220px]" : "w-[60px]"
                 )}
             >

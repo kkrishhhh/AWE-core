@@ -58,15 +58,32 @@ async def execute_workflow(state: dict) -> dict:
 
     if not tools_to_run:
         log.warning("no_tools_matched", requires_tools=requires_tools)
-        results.append({
-            "message": "No matching tools found for this task",
-            "available_tools": available_tool_names,
-        })
+        # Generate a helpful conversational response instead of raw JSON error
+        try:
+            from backend.resilience.llm_client import llm_client
+            prompt = f"""The user asked: "{state.get('user_input', primary_goal)}"
+
+I couldn't find a specific tool for this. Available tools are: calculator, weather_api, text_summarizer,
+web_scraper, data_analyzer, code_executor, json_transformer, sentiment_analyzer, knowledge_retrieval.
+
+Provide a helpful, natural response. If you can answer from your knowledge, do so.
+If not, suggest which of the available tools might help and how the user could rephrase their request.
+Be conversational and friendly. Never mention "tools" or "available_tools" in a technical way."""
+            response = llm_client.call(prompt, max_tokens=300)
+            results.append({"response": response.strip()})
+        except Exception as e:
+            log.error("fallback_response_failed", error=str(e))
+            results.append({
+                "response": "I couldn't find the right tool for that, but I can help with: "
+                "calculations, weather, text summaries, sentiment analysis, running Python code, "
+                "data analysis, web scraping, JSON transforms, and searching uploaded documents. "
+                "Could you rephrase your request?"
+            })
     else:
         for tool_name in tools_to_run:
             try:
                 tool = ToolRegistry.get(tool_name)
-                params = _build_params(tool_name, entities, primary_goal)
+                params = _build_params(tool_name, entities, state.get("user_input", primary_goal))
                 
                 manager.broadcast_sync(task_id, {
                     "type": "progress",
@@ -128,23 +145,87 @@ def _infer_tool(task_type: str, entities: list, goal: str, available: list) -> s
 
 
 def _build_params(tool_name: str, entities: list, goal: str) -> dict:
-    """Build tool parameters from entities and goal description."""
+    """Build tool parameters from entities and goal, using LLM for accurate extraction."""
+    import re
     first_entity = str(entities[0]) if entities else ""
+    log = structlog.get_logger().bind(agent="workflow_params")
 
-    param_builders = {
-        "weather_api": lambda: {"city": first_entity or goal},
-        "calculator": lambda: {"expression": goal},  # Use full goal so "3 * 4" is preserved
-        "text_summarizer": lambda: {"text": goal},
-        "web_scraper": lambda: {"url": first_entity if first_entity.startswith("http") else goal},
-        "data_analyzer": lambda: {"data": first_entity or goal},
-        "code_executor": lambda: {"code": first_entity or goal},
-        "json_transformer": lambda: {"data": first_entity, "path": "", "operation": "select"},
-        "sentiment_analyzer": lambda: {"text": goal},
-    }
+    # --- Calculator: extract just the math expression ---
+    if tool_name == "calculator":
+        expr = goal
+        # Strip common prefixes
+        for prefix in ["calculate", "compute", "evaluate", "solve", "what is", "find", "what's"]:
+            if expr.lower().startswith(prefix):
+                expr = expr[len(prefix):].lstrip(":").strip()
+        expr = expr.replace("^", "**")
+        expr = re.sub(r"sqrt\(", "math.sqrt(", expr, flags=re.IGNORECASE)
+        expr = expr.rstrip("?.")
+        # Convert natural language: "multiply X by Y"
+        expr = re.sub(r"multiply\s+(\S+)\s+by\s+(\S+)", r"\1 * \2", expr, flags=re.IGNORECASE)
+        expr = re.sub(r"divide\s+(\S+)\s+by\s+(\S+)", r"\1 / \2", expr, flags=re.IGNORECASE)
+        expr = re.sub(r"add\s+(\S+)\s+and\s+(\S+)", r"\1 + \2", expr, flags=re.IGNORECASE)
+        expr = re.sub(r"subtract\s+(\S+)\s+from\s+(\S+)", r"\2 - \1", expr, flags=re.IGNORECASE)
+        # If still has words, extract math portion
+        if re.search(r'[a-zA-Z]', expr) and 'math.' not in expr:
+            math_match = re.search(r'([\d][\d\s\+\-\*\/\%\(\)\.\*]*[\d\)])', expr)
+            if math_match:
+                expr = math_match.group(1).strip()
+        log.info("calculator_expression", raw=goal, cleaned=expr)
+        return {"expression": expr}
 
-    builder = param_builders.get(tool_name)
-    if builder:
-        return builder()
+    # --- Code Executor: extract just the code ---
+    if tool_name == "code_executor":
+        code = first_entity or goal
+        for prefix in ["execute", "run code", "run python", "python", "eval", "code"]:
+            if code.lower().startswith(prefix):
+                code = code[len(prefix):].lstrip(":").strip()
+        return {"code": code}
+
+    # --- Weather: extract city name ---
+    if tool_name == "weather_api":
+        city = first_entity
+        if not city or city == goal:
+            # Try extracting city from natural language
+            city_match = re.search(r'(?:weather|temperature|forecast)\s+(?:in|for|of|at)\s+(.+?)(?:\?|$|\.)', goal, re.IGNORECASE)
+            if city_match:
+                city = city_match.group(1).strip().rstrip("?.")
+            else:
+                city = re.sub(r'^.*?(?:weather|temperature)\s*(?:in|for|of|at)?\s*', '', goal, flags=re.IGNORECASE).strip().rstrip("?.")
+        return {"city": city or "London"}
+
+    # --- Web Scraper: extract URL ---
+    if tool_name == "web_scraper":
+        url_match = re.search(r'(https?://\S+)', goal)
+        url = url_match.group(1) if url_match else (first_entity if first_entity.startswith("http") else "")
+        return {"url": url}
+
+    # --- Sentiment Analyzer: extract text ---
+    if tool_name == "sentiment_analyzer":
+        text = goal
+        for prefix in ["analyze sentiment", "sentiment analysis", "analyze the sentiment of", "analyze"]:
+            if text.lower().startswith(prefix):
+                text = text[len(prefix):].lstrip(":").strip()
+        return {"text": text}
+
+    # --- Text Summarizer: extract text ---
+    if tool_name == "text_summarizer":
+        text = goal
+        for prefix in ["summarize", "summary of", "give me a summary of", "brief"]:
+            if text.lower().startswith(prefix):
+                text = text[len(prefix):].lstrip(":").strip()
+        return {"text": text}
+
+    # --- Data Analyzer: extract data ---
+    if tool_name == "data_analyzer":
+        # Try to extract numbers from the goal
+        numbers = re.findall(r'-?\d+\.?\d*', goal)
+        if numbers:
+            return {"data": ", ".join(numbers)}
+        return {"data": first_entity or goal}
+
+    # --- JSON Transformer ---
+    if tool_name == "json_transformer":
+        return {"data": first_entity or goal, "path": "", "operation": "select"}
 
     # Fallback: pass goal as the first required param
     return {"input": goal or first_entity}

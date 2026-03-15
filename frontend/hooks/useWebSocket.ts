@@ -9,6 +9,7 @@ export function useWebSocket(taskId: string | null) {
     const wsRef = useRef<WebSocketManager | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [messages, setMessages] = useState<WSMessage[]>([]);
+    const [streamingText, setStreamingText] = useState("");
 
     const {
         updateAgentStep,
@@ -19,9 +20,14 @@ export function useWebSocket(taskId: string | null) {
 
     const handleMessage = useCallback(
         (msg: WSMessage) => {
-            setMessages((prev) => [...prev, msg]);
+            if (msg.type !== "token") {
+                setMessages((prev) => [...prev, msg]);
+            }
 
             switch (msg.type) {
+                case "token":
+                    setStreamingText((prev) => prev + msg.token);
+                    break;
                 case "progress":
                     updateAgentStep(msg.agent, msg.status, msg.message);
                     break;
@@ -54,6 +60,9 @@ export function useWebSocket(taskId: string | null) {
     useEffect(() => {
         if (!taskId) return;
 
+        setStreamingText(""); // Reset text on new task
+        setMessages([]);
+
         // Initialize pipeline
         setActiveTask({
             id: taskId,
@@ -80,5 +89,5 @@ export function useWebSocket(taskId: string | null) {
         };
     }, [taskId, handleMessage, setActiveTask, setIsStreaming]);
 
-    return { messages, isConnected, sendApproval };
+    return { messages, isConnected, sendApproval, streamingText };
 }

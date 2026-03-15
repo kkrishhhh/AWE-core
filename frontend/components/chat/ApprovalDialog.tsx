@@ -27,8 +27,10 @@ export function ApprovalDialog({ approval, onRespond }: Props) {
                     animate={{ y: 0, scale: 1, opacity: 1 }}
                     exit={{ y: 100, opacity: 0 }}
                     transition={{ type: "spring", damping: 25 }}
-                    className="w-full max-w-lg glassmorphism rounded-2xl overflow-hidden"
+                    className="w-full max-w-lg glassmorphism rounded-2xl overflow-hidden border border-border/50 shadow-2xl"
                 >
+                    {/* Gradient accent bar */}
+                    <div className="h-1 w-full bg-gradient-to-r from-warning via-primary to-secondary" />
                     {/* Header */}
                     <div className="p-6 pb-4 border-b border-border">
                         <div className="flex items-center gap-3">
@@ -36,10 +38,9 @@ export function ApprovalDialog({ approval, onRespond }: Props) {
                                 <Shield className="w-5 h-5 text-warning" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-lg">Agent Needs Your Approval</h3>
+                                <h3 className="font-semibold text-lg">🛡️ Agent Needs Your Approval</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Review the execution plan below — {approval.plan.steps.length} steps,{" "}
-                                    {approval.plan.estimated_complexity} complexity
+                                    The AI wants to run {approval.plan.steps.length} steps. Review and approve or reject.
                                 </p>
                             </div>
                         </div>
@@ -82,7 +83,7 @@ export function ApprovalDialog({ approval, onRespond }: Props) {
                     <div className="p-6 pt-0 flex gap-3">
                         <button
                             onClick={() => onRespond(true, feedback)}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-white font-medium rounded-lg hover:bg-success/90 transition-all"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-white font-medium rounded-lg hover:bg-success/90 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
                         >
                             <CheckCircle className="w-4 h-4" />
                             Approve

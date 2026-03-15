@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus,
     Send,
@@ -66,7 +66,7 @@ export default function ChatPage() {
     });
 
     // WebSocket connection
-    const { isConnected } = useWebSocket(activeTaskId);
+    const { isConnected, streamingText } = useWebSocket(activeTaskId);
 
     // Placeholder cycling
     useEffect(() => {
@@ -151,9 +151,12 @@ export default function ChatPage() {
                         });
                         queryClient.invalidateQueries({ queryKey: ["conversations"] });
                         setActiveTaskId(null);
+                        useAppStore.getState().setIsStreaming(false);
                         break;
                     }
                 }
+                // Timeout fallback — stop streaming after max attempts
+                useAppStore.getState().setIsStreaming(false);
             };
             checkResult();
         } catch (err) {
@@ -167,6 +170,7 @@ export default function ChatPage() {
                     timestamp: new Date().toISOString(),
                 },
             ]);
+            useAppStore.getState().setIsStreaming(false);
         }
     }, [input, currentConversationId, isStreaming, setCurrentConversationId, queryClient]);
 
@@ -275,17 +279,50 @@ export default function ChatPage() {
                 <div className="flex-1 overflow-y-auto px-6 py-4">
                     {messages.length === 0 && !activeTask && (
                         <div className="h-full flex items-center justify-center">
-                            <div className="text-center">
+                            <div className="text-center max-w-xl w-full">
                                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                                     <MessageSquare className="w-8 h-8 text-primary" />
                                 </div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    Start a Conversation
+                                    What can I help you with?
                                 </h2>
-                                <p className="text-sm text-muted-foreground max-w-sm">
-                                    Type any task below. The AI agents will interpret, plan,
-                                    execute, and deliver results in real-time.
+                                <p className="text-sm text-muted-foreground mb-6">
+                                    Click an example below or type your own message
                                 </p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-left">
+                                    {[
+                                        { emoji: "🔢", label: "Calculate", prompt: "Calculate 345 * 87" },
+                                        { emoji: "🌤️", label: "Weather", prompt: "What's the weather in Mumbai?" },
+                                        { emoji: "📝", label: "Summarize", prompt: "Summarize: Artificial intelligence is transforming how we live and work, from voice assistants to autonomous vehicles. It enables machines to learn from data, recognize patterns, and make decisions with minimal human intervention." },
+                                        { emoji: "🎭", label: "Sentiment", prompt: "Analyze sentiment: This product is absolutely amazing, I love everything about it!" },
+                                        { emoji: "💻", label: "Run Code", prompt: "Execute: [x**2 for x in range(1, 11)]" },
+                                        { emoji: "📊", label: "Analyze Data", prompt: "Analyze this data: 23, 45, 67, 12, 89, 34, 56, 78, 90, 11" },
+                                        { emoji: "🌐", label: "Web Scraper", prompt: "Scrape https://example.com and show the main content" },
+                                        { emoji: "🔄", label: "JSON Transform", prompt: 'Transform this JSON: {"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}' },
+                                        { emoji: "📚", label: "Knowledge Base", prompt: "Search my documents for any uploaded information" },
+                                    ].map((ex) => (
+                                        <motion.button
+                                            key={ex.label}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => {
+                                                setInput(ex.prompt);
+                                                setTimeout(() => {
+                                                    // Trigger send
+                                                    const textarea = textareaRef.current;
+                                                    if (textarea) textarea.focus();
+                                                }, 100);
+                                            }}
+                                            className="glassmorphism rounded-xl p-3 text-sm hover:border-primary/30 transition-all group cursor-pointer text-left"
+                                        >
+                                            <span className="text-lg mr-2">{ex.emoji}</span>
+                                            <span className="font-medium text-foreground">{ex.label}</span>
+                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1 group-hover:text-foreground/70 transition-colors">
+                                                {ex.prompt}
+                                            </p>
+                                        </motion.button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -294,23 +331,37 @@ export default function ChatPage() {
                         <MessageBubble key={`${msg.timestamp}-${i}`} message={msg} />
                     ))}
 
-                    {/* Streaming indicator + Agent Pipeline (only shown WHILE agents are working) */}
-                    {isStreaming && (
-                        <>
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="flex items-center gap-2 text-sm text-muted-foreground ml-11 mb-2"
-                            >
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                Agents are working...
-                            </motion.div>
-
-                            {activeTask && activeTask.agentSteps.length > 0 && (
-                                <AgentPipeline steps={activeTask.agentSteps} />
-                            )}
-                        </>
+                    {streamingText && (
+                        <MessageBubble
+                            message={{
+                                role: "assistant",
+                                content: streamingText + " ▍",
+                                task_id: null,
+                                timestamp: new Date().toISOString()
+                            }}
+                        />
                     )}
+
+                    {/* Streaming indicator + Agent Pipeline (only shown WHILE agents are working) */}
+                    <AnimatePresence>
+                        {isStreaming && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground ml-11 mb-2">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Agents are working...
+                                </div>
+
+                                {activeTask && activeTask.agentSteps.length > 0 && (
+                                    <AgentPipeline steps={activeTask.agentSteps} />
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <div ref={messagesEndRef} />
                 </div>
@@ -332,7 +383,7 @@ export default function ChatPage() {
                             disabled={isStreaming}
                             rows={1}
                             className={cn(
-                                "w-full resize-none bg-muted/50 border border-border rounded-xl px-4 py-3 pr-12 text-sm",
+                                "w-full resize-none bg-muted/50 border border-border rounded-xl pl-4 pr-12 py-3 text-sm",
                                 "focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20",
                                 "placeholder:text-muted-foreground/60 transition-all",
                                 isStreaming && "opacity-60 cursor-not-allowed"
@@ -351,9 +402,9 @@ export default function ChatPage() {
                             onClick={handleSend}
                             disabled={!input.trim() || isStreaming}
                             className={cn(
-                                "absolute right-2 bottom-2 p-2 rounded-lg transition-all",
+                                "absolute right-2 top-[6px] p-2 rounded-lg transition-all flex items-center justify-center",
                                 input.trim() && !isStreaming
-                                    ? "bg-primary text-white hover:shadow-[0_0_20px_var(--primary-glow)]"
+                                    ? "bg-primary text-white hover:shadow-[0_0_15px_var(--primary-glow)]"
                                     : "text-muted-foreground cursor-not-allowed"
                             )}
                         >

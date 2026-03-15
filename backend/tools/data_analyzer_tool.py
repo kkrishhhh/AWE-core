@@ -23,6 +23,16 @@ class DataAnalyzerTool(BaseTool):
     def _parse_data(self, raw: str) -> list[float]:
         """Parse input as JSON array or comma/newline-separated values."""
         raw = raw.strip()
+        
+        # Clean up common conversational prefixes that the LLM might leave in
+        if ":" in raw:
+            parts = raw.split(":", 1)
+            # If the part after colon seems to have numbers, use that
+            if any(c.isdigit() for c in parts[1]):
+                raw = parts[1].strip()
+        
+        # Remove any leading/trailing quotes or brackets if it's not valid JSON
+        raw = raw.strip("'\"")
 
         # Try JSON array first
         try:

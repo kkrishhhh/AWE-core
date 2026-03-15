@@ -33,10 +33,21 @@ async def interpret_intent(state: dict) -> dict:
         "message": "Interpreting user intent...",
     })
 
-    # Build context-aware prompt
+    # Build context-aware prompt from native messages memory
     context_block = ""
-    if conversation_context:
-        context_block = f"""
+    messages = state.get("messages", [])
+    if len(messages) > 1:
+        # Exclude the last message which is the current user input
+        history = []
+        for m in messages[:-1]:
+            role = getattr(m, "type", "unknown")
+            if role == "human": role = "user"
+            if role == "ai": role = "assistant"
+            history.append(f"{role}: {m.content}")
+        
+        conversation_context = "\n".join(history)
+        if conversation_context:
+            context_block = f"""
 Previous conversation context (use this to resolve references like "that", "it", "the result", etc.):
 ---
 {conversation_context}
@@ -68,6 +79,15 @@ Return ONLY the JSON, no other text."""
 
     try:
         interpreted = llm_client.call_structured(prompt, InterpretedTask)
+        
+        # --- RAG Auto-Trigger Logic ---
+        rag_keywords = ["uploaded", "document", "pdf", "csv", "file", "knowledge base", "my docs"]
+        if any(kw in user_input.lower() for kw in rag_keywords):
+            if "knowledge_retrieval" not in interpreted.requires_tools:
+                interpreted.requires_tools.insert(0, "knowledge_retrieval")
+            if interpreted.task_type != "data_retrieval":
+                interpreted.task_type = "data_retrieval"
+        
         log.info(
             "agent_completed",
             task_type=interpreted.task_type,

@@ -107,7 +107,7 @@ class ResilientLLMClient:
             raise
 
     def call_structured(
-        self, prompt: str, schema: type[BaseModel], max_retries: int | None = None
+        self, prompt: str, schema: type[BaseModel], max_retries: int | None = None, max_tokens: int = 200
     ) -> BaseModel:
         """Call LLM with Pydantic validation, exponential backoff, and retry on schema errors."""
         retries = max_retries or self.max_retries
@@ -116,7 +116,7 @@ class ResilientLLMClient:
 
         for attempt in range(retries):
             try:
-                raw = self.call(current_prompt)
+                raw = self.call(current_prompt, max_tokens=max_tokens)
                 # Strip markdown code fences if present
                 cleaned = raw.strip()
                 if cleaned.startswith("```"):
@@ -129,7 +129,7 @@ class ResilientLLMClient:
             except (ValidationError, json.JSONDecodeError) as e:
                 last_error = e
                 # Exponential backoff with jitter
-                backoff = min(2 ** attempt * 0.5, 5.0)
+                backoff = min(2 ** attempt * 0.2, 2.0)
                 logger.warning(
                     "llm_structured_retry",
                     attempt=attempt + 1,

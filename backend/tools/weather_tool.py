@@ -22,9 +22,27 @@ class WeatherTool(BaseTool):
             result = data["results"][0]
             return result["latitude"], result["longitude"], result["name"]
 
+    def _clean_city_name(self, raw: str) -> str:
+        """Strip out non-city noise words from the city parameter."""
+        import re
+        # Remove common noise phrases the LLM might leave in
+        noise = [
+            r'\bair quality index\b', r'\baqi\b', r'\bweather\b', r'\btemperature\b',
+            r'\bforecast\b', r'\bhumidity\b', r'\bcondition\b', r'\bof\b', r'\bin\b',
+            r'\bfor\b', r'\bthe\b', r'\bwhat\s*is\b', r'\bhow\s*is\b', r'\bget\b',
+            r'\band\b', r'\bthere\b', r'\btoday\b', r'\bcurrent\b', r'\bnow\b',
+        ]
+        cleaned = raw
+        for pattern in noise:
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+        # Clean up extra whitespace and punctuation
+        cleaned = re.sub(r'[?,!.]', '', cleaned).strip()
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        return cleaned or raw  # Fall back to original if nothing left
+
     async def execute(self, parameters: dict) -> ToolResult:
         import httpx
-        city_query = parameters.get("city", "")
+        city_query = self._clean_city_name(parameters.get("city", ""))
         
         if not city_query or city_query == "Unknown":
             return ToolResult(success=False, data={}, error="No city provided")
